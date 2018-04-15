@@ -1,0 +1,247 @@
+import java_cup.runtime.Symbol;
+import syntaxtree.*;
+import java.util.*;
+
+action code {:
+    public Program goal;
+:}
+
+parser code {:
+    public Program getGoal() {
+        return action_obj.goal;
+    }
+:}
+
+/* ---------- TERMINALS ---------- */
+
+/* structure */
+terminal SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
+
+/* operators */
+terminal PLUS, MINUS, TIMES, LESSTHAN, AND, NOT;
+terminal DOT, COMMA, ASSIGNMENT;
+
+/* keywords/types */
+terminal IF, ELSE, WHILE, RETURN, INT, BOOLEAN, STRING;
+terminal TRUE, FALSE, CLASS, PUBLIC, STATIC, VOID;
+terminal THIS, NEW, MAIN, EXTENDS, LENGTH, PRINT;
+
+/* ids/literals */
+terminal Integer INT_LITERAL;
+terminal String ID;
+
+/* ---------- NON-TERMINALS ---------- */
+non terminal Program goal;
+non terminal MainClass main_class;
+non terminal ClassDecl class_declaration;
+non terminal ClassDeclList class_list;
+non terminal MethodDecl method_declaration;
+non terminal MethodDeclList method_list;
+non terminal Formal formal;
+non terminal FormalList formal_list, formal_list2;
+non terminal VarDecl var_declaration;
+non terminal VarDeclList var_list, var_list2;
+non terminal Type type;
+non terminal Statement statement;
+non terminal StatementList statement_list;
+non terminal Exp expression;
+non terminal ExpList exp_list, exp_list2;
+
+/* ---------- PRECEDENCES ---------- */
+precedence nonassoc ID, RETURN, LBRACE, IF, WHILE, RETURN, PRINT;
+
+precedence right ASSIGNMENT;
+precedence left AND;
+precedence nonassoc LESSTHAN;
+precedence left PLUS, MINUS;
+precedence left TIMES;
+precedence right NEW;
+precedence right NOT;
+precedence left DOT, LBRACKET, RBRACKET, LPAREN, RPAREN;
+
+/* ---------- GRAMMAR ---------- */
+start with goal;
+
+goal ::= main_class:am class_list:acl
+    {:
+        goal = new Program(am, acl);
+        RESULT = goal;
+    :}
+    ;
+
+main_class ::=
+    CLASS ID:ai1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:ai2 RPAREN LBRACE statement:as RBRACE RBRACE
+    {: RESULT = new MainClass(new Identifier(ai1), new Identifier(ai2), as); :}
+    ;
+
+class_list ::= | class_declaration:acd class_list:acl
+    {:
+        if (acl == null) {
+            acl = new ClassDeclList();
+        }
+        acl.addElement(acd);
+        RESULT = acl;
+    :}
+    ;
+
+class_declaration ::= CLASS ID:ai LBRACE var_list:avl1 method_list:aml1 RBRACE
+    {: RESULT = new ClassDeclSimple(new Identifier(ai), avl1, aml1); :}
+    CLASS ID:ai1 EXTENDS ID:ai2 LBRACE var_list:avl2 method_list:aml2 RBRACE
+    {: RESULT = new ClassDeclExtends(new Identifier(ai1), new Identifier(ai2), avl2, aml2); :}
+    ;
+
+method_list ::= method_declaration:amd method_list:aml
+    {:
+        aml.addElement(amd);
+        RESULT = aml;
+    :}
+    |
+    {: RESULT = new MethodDeclList(); :}
+    ;
+
+method_declaration ::=
+    PUBLIC type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl statement_list:asl RETURN expression:ae SEMICOLON RBRACE
+    {: RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, asl, ae); :}
+    ;
+
+formal_list ::=
+    formal_list2:afl
+    {: RESULT = afl; :}
+    |
+    {: RESULT = new FormalList(); :}
+    ;
+
+formal_list2 ::=
+    formal:af
+    {:
+        FormalList afl = new FormalList();
+        afl.addElement(af);
+        RESULT = afl;
+    :}
+    | formal:af COMMA formal_list2:afl
+    {:
+        afl.addElement(af);
+        RESULT = afl;
+    :}
+    ;
+
+formal ::= type:at ID:ai
+    {: RESULT = new Formal(at, new Identifier(ai)); :}
+    ;
+
+var_list ::= var_list2:avl
+    {: RESULT = avl; :}
+    |
+    {: RESULT = new VarDeclList(); :}
+    ;
+
+var_list2 ::=
+    var_declaration:avd
+    {:
+        VarDeclList avl = new VarDeclList();
+        avl.addElement(avd);
+        RESULT = avl;
+    :}
+    | var_list2:avl var_declaration:avd
+    {:
+        avl.addElement(avd);
+        RESULT = avl;
+    :}
+    ;
+
+var_declaration ::= type:at ID:ai SEMICOLON
+    {:
+        RESULT = new VarDecl(at, new Identifier(ai));
+    :}
+    ;
+
+type ::=
+    INT LBRACKET RBRACKET
+    {: RESULT = new IntArrayType(); :}
+    | BOOLEAN
+    {: RESULT = new BooleanType(); :}
+    | INT
+    {: RESULT = new IntegerType(); :}
+    | ID:as
+    {: RESULT = new IdentifierType(as.toString()); :}
+    ;
+
+statement_list ::=
+    statement:as statement_list:asl
+    {: asl.addElement(as); :}
+    |
+    {: RESULT = new StatementList(); :}
+    ;
+
+statement ::=
+    LBRACE statement_list:asl RBRACE
+    {: RESULT = new Block(asl); :}
+    | IF LPAREN expression:ae RPAREN statement:as1 ELSE statement:as2
+    {: RESULT = new If(ae, as1, as2); :}
+    | WHILE LPAREN expression:ae RPAREN statement:as
+    {: RESULT = new While(ae, as); :}
+    | PRINT LPAREN expression:ae RPAREN SEMICOLON
+    {: RESULT = new Print(ae); :}
+    | ID:ai ASSIGNMENT expression:ae SEMICOLON
+    {: RESULT = new Assign(new Identifier(ai), ae); :}
+    | ID:ai LBRACKET expression:ae1 RBRACKET ASSIGNMENT expression:ae2 SEMICOLON
+    {: RESULT = new ArrayAssign(new Identifier(ai), ae1, ae2); :}
+    ;
+
+expression ::=
+    expression:ae1 AND expression:ae2
+    {: RESULT = new And(ae1, ae2); :}
+    | expression:ae1 LESSTHAN expression:ae2
+    {: RESULT = new LessThan(ae1, ae2); :}
+    | expression:ae1 PLUS expression:ae2
+    {: RESULT = new Plus(ae1, ae2); :}
+    | expression:ae1 MINUS expression:ae2
+    {: RESULT = new Minus(ae1, ae2); :}
+    | expression:ae1 TIMES expression:ae2
+    {: RESULT = new Times(ae1, ae2); :}
+    | expression:ae1 LBRACKET expression:ae2 RBRACKET
+    {: RESULT = new ArrayLookup(ae1, ae2); :}
+    | expression:ae DOT LENGTH
+    {: RESULT = new ArrayLength(ae); :}
+    | expression:ae DOT ID:ai LPAREN exp_list:ael RPAREN
+    {: RESULT = new Call(ae, new Identifier(ai), ael); :}
+    | INT_LITERAL:ai
+    {: RESULT = new IntegerLiteral(ai); :}
+    | TRUE
+    {: RESULT = new True(); :}
+    | FALSE
+    {: RESULT = new False(); :}
+    | ID:ai
+    {: RESULT = new IdentifierExp(ai.toString()); :}
+    | THIS
+    {: RESULT = new This(); :}
+    | NEW INT LBRACKET expression:ae RBRACKET
+    {: RESULT = new NewArray(ae); :}
+    | NEW ID:ai LPAREN RPAREN
+    {: RESULT = new NewObject(new Identifier(ai)); :}
+    | NOT expression:ae
+    {: RESULT = new Not(ae); :}
+    | LPAREN expression:ae RPAREN
+    {: RESULT = ae; :}
+    ;
+
+exp_list ::=
+    exp_list2:ael
+    {: RESULT = ael; :}
+    |
+    {: RESULT = new ExpList(); :}
+    ;
+
+exp_list2 ::=
+    expression:ae
+    {:
+        ExpList ael = new ExpList();
+        ael.addElement(ae);
+        RESULT = ael;
+    :}
+    | expression:ae COMMA exp_list2:ael
+    {:
+        ael.addElement(ae);
+        RESULT = ael;
+    :}
+    ;
