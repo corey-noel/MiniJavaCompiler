@@ -40,7 +40,7 @@ non terminal MethodDeclList method_list;
 non terminal Formal formal;
 non terminal FormalList formal_list, formal_list2;
 non terminal VarDecl var_declaration;
-non terminal VarDeclList var_list, var_list2;
+non terminal VarDeclList var_list;
 non terminal Type type;
 non terminal Statement statement;
 non terminal StatementList statement_list;
@@ -62,7 +62,8 @@ precedence left DOT, LBRACKET, RBRACKET, LPAREN, RPAREN;
 /* ---------- GRAMMAR ---------- */
 start with goal;
 
-goal ::= main_class:am class_list:acl
+goal ::=
+    main_class:am class_list:acl
     {:
         goal = new Program(am, acl);
         RESULT = goal;
@@ -71,26 +72,36 @@ goal ::= main_class:am class_list:acl
 
 main_class ::=
     CLASS ID:ai1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:ai2 RPAREN LBRACE statement:as RBRACE RBRACE
-    {: RESULT = new MainClass(new Identifier(ai1), new Identifier(ai2), as); :}
-    ;
-
-class_list ::= | class_declaration:acd class_list:acl
     {:
-        if (acl == null) {
-            acl = new ClassDeclList();
-        }
-        acl.addElement(acd);
-        RESULT = acl;
+        RESULT = new MainClass(new Identifier(ai1), new Identifier(ai2), as);
     :}
     ;
 
-class_declaration ::= CLASS ID:ai LBRACE var_list:avl1 method_list:aml1 RBRACE
-    {: RESULT = new ClassDeclSimple(new Identifier(ai), avl1, aml1); :}
-    CLASS ID:ai1 EXTENDS ID:ai2 LBRACE var_list:avl2 method_list:aml2 RBRACE
-    {: RESULT = new ClassDeclExtends(new Identifier(ai1), new Identifier(ai2), avl2, aml2); :}
+class_list ::=
+    class_list:acl class_declaration:acd
+    {:
+        acl.addElement(acd);
+        RESULT = acl;
+    :}
+    |
+    {:
+        RESULT = new ClassDeclList();
+    :}
     ;
 
-method_list ::= method_declaration:amd method_list:aml
+class_declaration ::=
+    CLASS ID:ai LBRACE var_list:avl1 method_list:aml1 RBRACE
+    {:
+        RESULT = new ClassDeclSimple(new Identifier(ai), avl1, aml1);
+    :}
+    | CLASS ID:ai1 EXTENDS ID:ai2 LBRACE var_list:avl2 method_list:aml2 RBRACE
+    {:
+        RESULT = new ClassDeclExtends(new Identifier(ai1), new Identifier(ai2), avl2, aml2);
+    :}
+    ;
+
+method_list ::=
+    method_list:aml method_declaration:amd
     {:
         aml.addElement(amd);
         RESULT = aml;
@@ -101,7 +112,13 @@ method_list ::= method_declaration:amd method_list:aml
 
 method_declaration ::=
     PUBLIC type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl statement_list:asl RETURN expression:ae SEMICOLON RBRACE
-    {: RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, asl, ae); :}
+    {:
+        RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, asl, ae);
+    :}
+    | PUBLIC type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl RETURN expression:ae SEMICOLON RBRACE
+    {:
+        RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, new StatementList(), ae);
+    :}
     ;
 
 formal_list ::=
@@ -118,41 +135,30 @@ formal_list2 ::=
         afl.addElement(af);
         RESULT = afl;
     :}
-    | formal:af COMMA formal_list2:afl
+    | formal_list2:afl COMMA formal:af
     {:
         afl.addElement(af);
         RESULT = afl;
     :}
     ;
 
-formal ::= type:at ID:ai
+formal ::=
+    type:at ID:ai
     {: RESULT = new Formal(at, new Identifier(ai)); :}
     ;
 
-var_list ::= var_list2:avl
-    {: RESULT = avl; :}
+var_list ::=
+    var_list:avl var_declaration:avd
+    {:
+        avl.addElement(avd);
+        RESULT = avl;
+    :}
     |
     {: RESULT = new VarDeclList(); :}
     ;
 
-var_list2 ::=
-    var_declaration:avd
-    {:
-        VarDeclList avl = new VarDeclList();
-        avl.addElement(avd);
-        RESULT = avl;
-    :}
-    | var_list2:avl var_declaration:avd
-    {:
-        avl.addElement(avd);
-        RESULT = avl;
-    :}
-    ;
-
 var_declaration ::= type:at ID:ai SEMICOLON
-    {:
-        RESULT = new VarDecl(at, new Identifier(ai));
-    :}
+    {: RESULT = new VarDecl(at, new Identifier(ai)); :}
     ;
 
 type ::=
@@ -167,15 +173,24 @@ type ::=
     ;
 
 statement_list ::=
-    statement:as statement_list:asl
-    {: asl.addElement(as); :}
-    |
-    {: RESULT = new StatementList(); :}
+    statement_list:asl statement:as
+    {:
+        asl.addElement(as);
+        RESULT = asl;
+    :}
+    | statement:as
+    {:
+        StatementList sl = new StatementList();
+        sl.addElement(as);
+        RESULT = sl;
+    :}
     ;
 
 statement ::=
     LBRACE statement_list:asl RBRACE
     {: RESULT = new Block(asl); :}
+    | LBRACE RBRACE
+    {: RESULT = new Block(new StatementList()); :}
     | IF LPAREN expression:ae RPAREN statement:as1 ELSE statement:as2
     {: RESULT = new If(ae, as1, as2); :}
     | WHILE LPAREN expression:ae RPAREN statement:as
@@ -239,7 +254,7 @@ exp_list2 ::=
         ael.addElement(ae);
         RESULT = ael;
     :}
-    | expression:ae COMMA exp_list2:ael
+    | exp_list2:ael COMMA expression:ae
     {:
         ael.addElement(ae);
         RESULT = ael;

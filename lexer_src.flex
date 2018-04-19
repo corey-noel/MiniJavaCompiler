@@ -14,9 +14,11 @@ import java_cup.runtime.*;
   StringBuffer string = new StringBuffer();
 
   private Symbol symbol(int type) {
+    // System.out.printf("%d matched\n", type);
     return new Symbol(type, yyline, yycolumn);
   }
   private Symbol symbol(int type, Object value) {
+    // System.out.printf("%d matched with value %s\n", type, value);
     return new Symbol(type, yyline, yycolumn, value);
   }
 %}
@@ -73,6 +75,7 @@ Comment = {BlockComment} | {LineComment}
 
 {Integer} { return symbol(SymTable.INT_LITERAL, Integer.parseInt(yytext())); }
 {Identifier} { return symbol(SymTable.ID, yytext()); }
+
 
 {WhiteSpace} {}
 {Comment} {}
