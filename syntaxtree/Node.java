@@ -1,6 +1,6 @@
 package syntaxtree;
 
-class Node {
+abstract class Node {
   public int l, c;
 
   public Node(int line, int col) {

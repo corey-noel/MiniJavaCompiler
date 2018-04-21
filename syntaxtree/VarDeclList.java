@@ -5,8 +5,8 @@ import java.util.Vector;
 public class VarDeclList extends Node {
   private Vector list;
 
-  public VarDeclList(int l, int c) {
-    super(l, c);
+  public VarDeclList() {
+    super(-1, -1);
     list = new Vector();
   }
 

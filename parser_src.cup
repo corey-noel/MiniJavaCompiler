@@ -15,20 +15,20 @@ parser code {:
 /* ---------- TERMINALS ---------- */
 
 /* structure */
-terminal SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
+terminal Symbol SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
 
 /* operators */
-terminal PLUS, MINUS, TIMES, LESSTHAN, AND, NOT;
-terminal DOT, COMMA, ASSIGNMENT;
+terminal Symbol PLUS, MINUS, TIMES, LESSTHAN, AND, NOT;
+terminal Symbol DOT, COMMA, ASSIGNMENT;
 
 /* keywords/types */
-terminal IF, ELSE, WHILE, RETURN, INT, BOOLEAN, STRING;
-terminal TRUE, FALSE, CLASS, PUBLIC, STATIC, VOID;
-terminal THIS, NEW, MAIN, EXTENDS, LENGTH, PRINT;
+terminal Symbol IF, ELSE, WHILE, RETURN, INT, BOOLEAN, STRING;
+terminal Symbol TRUE, FALSE, CLASS, PUBLIC, STATIC, VOID;
+terminal Symbol THIS, NEW, MAIN, EXTENDS, LENGTH, PRINT;
 
 /* ids/literals */
-terminal Integer INT_LITERAL;
-terminal String ID;
+terminal IntegerLiteral INT_LITERAL;
+terminal Identifier ID;
 
 /* ---------- NON-TERMINALS ---------- */
 non terminal Program goal;
@@ -65,15 +65,15 @@ start with goal;
 goal ::=
     main_class:am class_list:acl
     {:
-        goal = new Program(am, acl, am.l, am.r);
+        goal = new Program(am, acl, am.l, am.c);
         RESULT = goal;
     :}
     ;
 
 main_class ::=
-    CLASS ID:ai1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:ai2 RPAREN LBRACE statement:as RBRACE RBRACE
+    CLASS:ac ID:ai1 LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:ai2 RPAREN LBRACE statement:as RBRACE RBRACE
     {:
-        RESULT = new MainClass(new Identifier(ai1), new Identifier(ai2), as);
+        RESULT = new MainClass(ai1, ai2, as, acleft, acright);
     :}
     ;
 
@@ -84,19 +84,17 @@ class_list ::=
         RESULT = acl;
     :}
     |
-    {:
-        RESULT = new ClassDeclList();
-    :}
+    {: RESULT = new ClassDeclList(); :}
     ;
 
 class_declaration ::=
-    CLASS ID:ai LBRACE var_list:avl1 method_list:aml1 RBRACE
+    CLASS:ac ID:ai LBRACE var_list:avl1 method_list:aml1 RBRACE
     {:
-        RESULT = new ClassDeclSimple(new Identifier(ai), avl1, aml1);
+        RESULT = new ClassDeclSimple(ai, avl1, aml1, acleft, acright);
     :}
-    | CLASS ID:ai1 EXTENDS ID:ai2 LBRACE var_list:avl2 method_list:aml2 RBRACE
+    | CLASS:ac ID:ai1 EXTENDS ID:ai2 LBRACE var_list:avl2 method_list:aml2 RBRACE
     {:
-        RESULT = new ClassDeclExtends(new Identifier(ai1), new Identifier(ai2), avl2, aml2);
+        RESULT = new ClassDeclExtends(ai1, ai2, avl2, aml2, acleft, acright);
     :}
     ;
 
@@ -111,13 +109,13 @@ method_list ::=
     ;
 
 method_declaration ::=
-    PUBLIC type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl statement_list:asl RETURN expression:ae SEMICOLON RBRACE
+    PUBLIC:ap type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl statement_list:asl RETURN expression:ae SEMICOLON RBRACE
     {:
-        RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, asl, ae);
+        RESULT = new MethodDecl(at, ai, afl, avl, asl, ae, apleft, apright);
     :}
-    | PUBLIC type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl RETURN expression:ae SEMICOLON RBRACE
+    | PUBLIC:ap type:at ID:ai LPAREN formal_list:afl RPAREN LBRACE var_list:avl RETURN expression:ae SEMICOLON RBRACE
     {:
-        RESULT = new MethodDecl(at, new Identifier(ai), afl, avl, new StatementList(), ae);
+        RESULT = new MethodDecl(at, ai, afl, avl, new StatementList(), ae, apleft, apright);
     :}
     ;
 
@@ -144,7 +142,7 @@ formal_list2 ::=
 
 formal ::=
     type:at ID:ai
-    {: RESULT = new Formal(at, new Identifier(ai)); :}
+    {: RESULT = new Formal(at, ai, at.l, at.c); :}
     ;
 
 var_list ::=
@@ -158,18 +156,18 @@ var_list ::=
     ;
 
 var_declaration ::= type:at ID:ai SEMICOLON
-    {: RESULT = new VarDecl(at, new Identifier(ai)); :}
+    {: RESULT = new VarDecl(at, ai, at.l, at.c); :}
     ;
 
 type ::=
-    INT LBRACKET RBRACKET
-    {: RESULT = new IntArrayType(); :}
-    | BOOLEAN
-    {: RESULT = new BooleanType(); :}
-    | INT
-    {: RESULT = new IntegerType(); :}
+    INT:ai LBRACKET RBRACKET
+    {: RESULT = new IntArrayType(aileft, airight); :}
+    | BOOLEAN:ab
+    {: RESULT = new BooleanType(ableft, abright); :}
+    | INT:ai
+    {: RESULT = new IntegerType(aileft, airight); :}
     | ID:as
-    {: RESULT = new IdentifierType(as.toString()); :}
+    {: RESULT = new IdentifierType(as.s, as.l, as.c); :}
     ;
 
 statement_list ::=
@@ -187,55 +185,55 @@ statement_list ::=
     ;
 
 statement ::=
-    LBRACE statement_list:asl RBRACE
-    {: RESULT = new Block(asl); :}
-    | LBRACE RBRACE
-    {: RESULT = new Block(new StatementList()); :}
-    | IF LPAREN expression:ae RPAREN statement:as1 ELSE statement:as2
-    {: RESULT = new If(ae, as1, as2); :}
-    | WHILE LPAREN expression:ae RPAREN statement:as
-    {: RESULT = new While(ae, as); :}
-    | PRINT LPAREN expression:ae RPAREN SEMICOLON
-    {: RESULT = new Print(ae); :}
+    LBRACE:al statement_list:asl RBRACE
+    {: RESULT = new Block(asl, alleft, alright); :}
+    | LBRACE:al RBRACE
+    {: RESULT = new Block(new StatementList(), alleft, alright); :}
+    | IF:ai LPAREN expression:ae RPAREN statement:as1 ELSE statement:as2
+    {: RESULT = new If(ae, as1, as2, aileft, airight); :}
+    | WHILE:aw LPAREN expression:ae RPAREN statement:as
+    {: RESULT = new While(ae, as, awleft, awright); :}
+    | PRINT:ap LPAREN expression:ae RPAREN SEMICOLON
+    {: RESULT = new Print(ae, apleft, apright); :}
     | ID:ai ASSIGNMENT expression:ae SEMICOLON
-    {: RESULT = new Assign(new Identifier(ai), ae); :}
+    {: RESULT = new Assign(ai, ae, ai.l, ai.c); :}
     | ID:ai LBRACKET expression:ae1 RBRACKET ASSIGNMENT expression:ae2 SEMICOLON
-    {: RESULT = new ArrayAssign(new Identifier(ai), ae1, ae2); :}
+    {: RESULT = new ArrayAssign(ai, ae1, ae2, ai.l, ai.c); :}
     ;
 
 expression ::=
     expression:ae1 AND expression:ae2
-    {: RESULT = new And(ae1, ae2); :}
+    {: RESULT = new And(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae1 LESSTHAN expression:ae2
-    {: RESULT = new LessThan(ae1, ae2); :}
+    {: RESULT = new LessThan(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae1 PLUS expression:ae2
-    {: RESULT = new Plus(ae1, ae2); :}
+    {: RESULT = new Plus(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae1 MINUS expression:ae2
-    {: RESULT = new Minus(ae1, ae2); :}
+    {: RESULT = new Minus(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae1 TIMES expression:ae2
-    {: RESULT = new Times(ae1, ae2); :}
+    {: RESULT = new Times(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae1 LBRACKET expression:ae2 RBRACKET
-    {: RESULT = new ArrayLookup(ae1, ae2); :}
+    {: RESULT = new ArrayLookup(ae1, ae2, ae1.l, ae1.c); :}
     | expression:ae DOT LENGTH
-    {: RESULT = new ArrayLength(ae); :}
+    {: RESULT = new ArrayLength(ae, ae.l, ae.c); :}
     | expression:ae DOT ID:ai LPAREN exp_list:ael RPAREN
-    {: RESULT = new Call(ae, new Identifier(ai), ael); :}
+    {: RESULT = new Call(ae, ai, ael, ae.l, ae.c); :}
     | INT_LITERAL:ai
-    {: RESULT = new IntegerLiteral(ai); :}
-    | TRUE
-    {: RESULT = new True(); :}
-    | FALSE
-    {: RESULT = new False(); :}
+    {: RESULT = ai; :}
+    | TRUE:at
+    {: RESULT = new True(atleft, atright); :}
+    | FALSE:af
+    {: RESULT = new False(afleft, afright); :}
     | ID:ai
-    {: RESULT = new IdentifierExp(ai.toString()); :}
-    | THIS
-    {: RESULT = new This(); :}
-    | NEW INT LBRACKET expression:ae RBRACKET
-    {: RESULT = new NewArray(ae); :}
-    | NEW ID:ai LPAREN RPAREN
-    {: RESULT = new NewObject(new Identifier(ai)); :}
-    | NOT expression:ae
-    {: RESULT = new Not(ae); :}
+    {: RESULT = new IdentifierExp(ai.s, ai.l, ai.c); :}
+    | THIS:at
+    {: RESULT = new This(atleft, atright); :}
+    | NEW:an INT LBRACKET expression:ae RBRACKET
+    {: RESULT = new NewArray(ae, anleft, anright); :}
+    | NEW:an ID:ai LPAREN RPAREN
+    {: RESULT = new NewObject(ai, anleft, anright); :}
+    | NOT:an expression:ae
+    {: RESULT = new Not(ae, anleft, anright); :}
     | LPAREN expression:ae RPAREN
     {: RESULT = ae; :}
     ;

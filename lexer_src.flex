@@ -1,5 +1,7 @@
 /* JFlex MiniJava lexer */
+import java_cup.runtime.Symbol;
 import java_cup.runtime.*;
+import syntaxtree.*;
 
 %%
 
@@ -15,11 +17,11 @@ import java_cup.runtime.*;
 
   private Symbol symbol(int type) {
     // System.out.printf("%d matched\n", type);
-    return new Symbol(type, yyline, yycolumn);
+    return new Symbol(type, yyline + 1, yycolumn + 1);
   }
   private Symbol symbol(int type, Object value) {
     // System.out.printf("%d matched with value %s\n", type, value);
-    return new Symbol(type, yyline, yycolumn, value);
+    return new Symbol(type, yyline + 1, yycolumn + 1, value);
   }
 %}
 
@@ -73,12 +75,12 @@ Comment = {BlockComment} | {LineComment}
 "length" { return symbol(SymTable.LENGTH); }
 "System.out.println" { return symbol(SymTable.PRINT); }
 
-{Integer} { return symbol(SymTable.INT_LITERAL, Integer.parseInt(yytext())); }
-{Identifier} { return symbol(SymTable.ID, yytext()); }
+{Integer} { return symbol(SymTable.INT_LITERAL, new IntegerLiteral(Integer.parseInt(yytext()), yyline + 1, yycolumn + 1)); }
+{Identifier} { return symbol(SymTable.ID, new Identifier(yytext(), yyline + 1, yycolumn + 1)); }
 
 
 {WhiteSpace} {}
 {Comment} {}
 
 [^] { System.out.printf("Illegal character '%c' at line %d column %d\n",
-	yytext().charAt(0), yyline, yycolumn); }
+  yytext().charAt(0), yyline + 1, yycolumn + 1); }

@@ -5,8 +5,8 @@ import java.util.Vector;
 public class MethodDeclList extends Node {
   private Vector list;
 
-  public MethodDeclList(int l, int c) {
-    super(l, c);
+  public MethodDeclList() {
+    super(-1, -1);
     list = new Vector();
   }
 
@@ -14,11 +14,11 @@ public class MethodDeclList extends Node {
     list.addElement(n);
   }
 
-   public MethodDecl elementAt(int i)  {
+  public MethodDecl elementAt(int i)  {
     return (MethodDecl)list.elementAt(i);
   }
 
-   public int size() {
+  public int size() {
     return list.size();
   }
 }
