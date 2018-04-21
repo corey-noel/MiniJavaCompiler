@@ -2,22 +2,23 @@ package syntaxtree;
 
 import java.util.Vector;
 
-public class ClassDeclList {
-   private Vector list;
+public class ClassDeclList extends Node {
+  private Vector list;
 
-   public ClassDeclList() {
-      list = new Vector();
-   }
+  public ClassDeclList() {
+    super(-1, -1);
+    list = new Vector();
+  }
 
-   public void addElement(ClassDecl n) {
-      list.addElement(n);
-   }
+  public void addElement(ClassDecl n) {
+    list.addElement(n);
+  }
 
-   public ClassDecl elementAt(int i)  { 
-      return (ClassDecl)list.elementAt(i); 
-   }
+  public ClassDecl elementAt(int i)  {
+    return (ClassDecl)list.elementAt(i);
+  }
 
-   public int size() { 
-      return list.size(); 
-   }
+  public int size() {
+    return list.size();
+  }
 }

@@ -6,8 +6,9 @@ public class Assign extends Statement {
   public Identifier i;
   public Exp e;
 
-  public Assign(Identifier ai, Exp ae) {
-    i=ai; e=ae; 
+  public Assign(Identifier ai, Exp ae, int l, int c) {
+    super(l, c);
+    i=ai; e=ae;
   }
 
   public void accept(Visitor v) {

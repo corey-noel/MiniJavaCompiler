@@ -4,8 +4,9 @@ import visitor.TypeVisitor;
 
 public class NewObject extends Exp {
   public Identifier i;
-  
-  public NewObject(Identifier ai) {
+
+  public NewObject(Identifier ai, int l, int c) {
+    super(l, c);
     i=ai;
   }
 

@@ -5,8 +5,9 @@ import visitor.TypeVisitor;
 public class Print extends Statement {
   public Exp e;
 
-  public Print(Exp ae) {
-    e=ae; 
+  public Print(Exp ae, int l, int c) {
+    super(l, c);
+    e=ae;
   }
 
   public void accept(Visitor v) {
