@@ -2,10 +2,11 @@ package syntaxtree;
 
 import java.util.Vector;
 
-public class FormalList {
+public class FormalList extends Node {
    private Vector list;
 
-   public FormalList() {
+   public FormalList(int l, int c) {
+    super(l, c);
       list = new Vector();
    }
 
@@ -13,11 +14,11 @@ public class FormalList {
       list.addElement(n);
    }
 
-   public Formal elementAt(int i)  { 
-      return (Formal)list.elementAt(i); 
+   public Formal elementAt(int i)  {
+      return (Formal)list.elementAt(i);
    }
 
-   public int size() { 
-      return list.size(); 
+   public int size() {
+      return list.size();
    }
 }

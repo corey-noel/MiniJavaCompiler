@@ -2,10 +2,11 @@ package syntaxtree;
 
 import java.util.Vector;
 
-public class StatementList {
+public class StatementList extends Node {
    private Vector list;
 
-   public StatementList() {
+   public StatementList(int l, int c) {
+      super(l, c);
       list = new Vector();
    }
 
@@ -13,11 +14,11 @@ public class StatementList {
       list.addElement(n);
    }
 
-   public Statement elementAt(int i)  { 
-      return (Statement)list.elementAt(i); 
+   public Statement elementAt(int i)  {
+      return (Statement)list.elementAt(i);
    }
 
-   public int size() { 
-      return list.size(); 
+   public int size() {
+      return list.size();
    }
 }

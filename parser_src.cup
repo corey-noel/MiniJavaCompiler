@@ -65,7 +65,7 @@ start with goal;
 goal ::=
     main_class:am class_list:acl
     {:
-        goal = new Program(am, acl);
+        goal = new Program(am, acl, am.l, am.r);
         RESULT = goal;
     :}
     ;
